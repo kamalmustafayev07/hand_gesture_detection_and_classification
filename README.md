@@ -172,4 +172,176 @@ The **`utils/`** directory contains reusable components imported across notebook
   * Balanced train/val/test splits for classification
   * Extended split logic preserving balance for Elvin’s added images
   * YOLO-compatible splits for object detection
-* **Inference utilities** – shared logic for the complete detection + classification pipeline
+* **Inference utilities** – shared logic for the complete detection + classification pipeline 
+
+## 3. Dataset Description
+
+This section describes the **data collection, annotation, organization, and sharing process** in accordance with the project guidelines. The dataset targets **hand gesture recognition for digits 0–5 shown with one hand**, allowing **natural variability in finger configurations** while enforcing a consistent constraint: the **inner side of the palm always faces the camera**.
+
+The data is handled **separately for object detection and classification** to ensure proper supervision, balanced splits, and fair evaluation across both stages of the pipeline.
+
+---
+
+### Data Collection
+
+- **Source**: All images were captured using a **smartphone camera**. No webcams or external imaging devices were used.
+- **Participants**: The dataset was collected by the author with assistance from a friend, resulting in images of **multiple hands** to increase visual diversity.
+- **Variability**: Images were intentionally collected under diverse conditions:
+  - **Lighting**: indoor, outdoor, natural, artificial
+  - **Backgrounds**: plain walls, cluttered indoor scenes, outdoor environments
+  - **Hand orientation**: slight rotations and tilts while keeping the palm facing the camera
+  - **Distance to camera**:
+    - *onlyhand*: close-up images with the hand filling most of the frame
+    - *selfie*: wider, contextual images where the hand appears within the full scene
+- **Image Types Distribution**: A strict **50/50 split** between *onlyhand* and *selfie* images was maintained to improve real-world robustness.
+
+**Dataset size (original):**
+- **Total images**: 444  
+  - 222 *onlyhand*
+  - 222 *selfie*
+- **Classes**: 6 (digits 0–5)
+- **Per class**: 74 images (37 onlyhand + 37 selfie)
+
+---
+
+### Dataset Structure
+
+All datasets are stored under the `data/` directory.
+
+#### Object Detection Dataset  
+**Path:** `data/data.zip → dataset_object_detection/`
+
+```
+
+dataset_object_detection/
+├── images/
+│   └── *.jpg
+└── labels/
+│   └── *.txt
+
+```
+
+- **Images**: 444 raw `.jpg` images
+- **Labels**: YOLO-format `.txt` files with matching filenames
+- **Classes**: Single class — `hand`
+- **Label format**:
+```
+
+class_id x_center y_center width height
+
+```
+All values are **normalized to [0, 1]**.
+
+---
+
+#### Classification Dataset (Original)  
+**Path:** `data/data.zip → dataset_classification/`
+
+```
+
+dataset_classification/
+├── 0/
+├── 1/
+├── 2/
+├── 3/
+├── 4/
+└── 5/
+
+````
+
+- **Content**: Cropped hand images extracted from detection bounding boxes
+- **Per class**: 74 images
+- **Purpose**: Gesture classification only
+
+---
+
+#### Classification Dataset (Augmented with Shared Data)  
+**Path:** `data/data_added_elvin.zip → dataset_classification/`
+
+- Builds upon the original classification dataset
+- **Added data source**: Elvin Mahmudzada
+- **Added images**: 18 per class (files prefixed with `photo`)
+- **Total per class**: 92 images
+  - 37 onlyhand
+  - 37 selfie
+  - 18 photo (shared)
+
+This augmentation increases **inter-person variability**, hand shapes, and contextual diversity, improving generalization.
+
+---
+
+### Annotation Process
+
+- **Tool**: **X-AnyLabeling**
+- **Bounding boxes**:
+  - Tightly enclose the hand region from **wrist to fingertips**
+  - One bounding box per image
+  - Single class: `hand`
+- **Output format**:
+  - YOLO-compatible `.txt` files
+  - Stored under:
+    ```
+    dataset_object_detection/labels/
+    ```
+
+Bounding box annotations were also used to generate cropped images for the classification dataset.
+
+---
+
+### Data Sharing Policy
+
+- **Independently collected data**:
+  - All **444 images** in `data/data.zip` were collected and annotated solely by the author.
+- **Shared data**:
+  - **108 cropped images** (18 per class) from Elvin Mahmudzada
+  - Used **only for classification**
+  - No object detection labels were shared, reused, or modified
+
+All shared data is clearly documented and traceable by filename conventions.
+
+---
+
+### Dataset Splitting
+
+Dataset splits are handled using dedicated scripts in the `utils/` directory to ensure **reproducibility and balance**.
+
+#### Object Detection Split  
+**Script:** `utils/split_object_detection.py`
+
+- **Default ratios**: 70% / 20% / 10% (train / val / test)
+- **Preserves**:
+  - `images/` and `labels/` directory structure
+  - Balance between *onlyhand* and *selfie* images
+
+**Output structure:**
+```text
+dataset_object_detection/
+├── train/
+├── val/
+└── test/
+```
+
+#### Classification Split (Original Dataset)  
+**Script:** `utils/split_classification.py`
+
+- **Default ratios**: 60% / 20% / 20%
+- **Guarantees**:
+- Class balance across splits
+- Equal proportion of *onlyhand* and *selfie* images per class
+
+---
+
+#### Classification Split (Augmented Dataset)  
+**Script:** `utils/split_classification_added_elvin.py`
+
+- Extends the original splitting logic
+- Additionally balances:
+- *onlyhand*
+- *selfie*
+- *photo* (shared data)
+- Ensures proportional representation of all image sources across train, validation, and test sets
+
+---
+
+This structured approach ensures **transparent data provenance**, **balanced evaluation**, and **reproducible experiments** across both detection and classification stages.
+
