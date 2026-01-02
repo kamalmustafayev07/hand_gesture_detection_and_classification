@@ -36,4 +36,140 @@ This pipeline is implemented in a dedicated inference notebook, ensuring it work
 ### Group Information
 This is an individual project completed by one student. In accordance with the dataset sharing policy, the core dataset was collected and labeled independently. Additional data was shared from groupmate Elvin Mahmudzada to enhance the classification dataset, with clear documentation: the original dataset includes 444 images (222 "onlyhand" close-ups and 222 "selfie" full-view images, balanced at 74 per class), while Elvin's contribution added 18 images per class for improved variability and model robustness. All shared data was integrated post-labeling, and the project maintains full attribution for collected versus shared portions. 
 
-## 2. Dataset Description
+## 2. Project Structure Overview
+
+The project follows a **clear, modular, and reproducible folder structure**, separating configuration, data, models, experiments, results, and reusable utilities.
+
+### Directory Layout
+
+```text
+project_root/
+│
+├── configuration/
+│   └── detection.yaml
+│
+├── data/
+│   ├── data.zip
+│   └── data_added_elvin.zip
+│
+├── models/
+│   ├── classification/
+│   └── detection/
+│
+├── notebooks/
+│   ├── 01-yolo_model_training.ipynb
+│   ├── 02-classification_model_training.ipynb
+│   └── 03-inference_pipeline.ipynb
+│
+├── results/
+│   └── detection_metrics/
+│       ├── training_hand_yolo11/
+│       └── val_test_metrics/
+│
+└── utils/
+    ├── classification_augmentations.py
+    ├── classification_generator.py
+    ├── classification_model_builder.py
+    ├── inference.py
+    ├── split_classification.py
+    ├── split_classification_added_elvin.py
+    └── split_object_detection.py
+````
+
+---
+
+### Configuration
+
+**`configuration/detection.yaml`**
+Contains the full configuration for training the **YOLOv11 hand detection model**, including dataset paths, class definitions, and training parameters.
+
+---
+
+### Data
+
+#### `data/data.zip`
+
+The core dataset collected by the author, containing **444 images**:
+
+* **222 `onlyhand` images** (close-up hand crops)
+* **222 `selfie` images** (hand visible within a larger scene)
+
+The dataset is balanced with **74 images per class (0–5)**, equally split between *onlyhand* and *selfie* images.
+
+**Internal structure:**
+
+* **`dataset_classification/`**
+
+  * Six folders (`0`–`5`), one per class
+  * Contains **cropped hand images**, obtained by extracting bounding boxes
+* **`dataset_object_detection/`**
+
+  * `images/`: original images
+  * `labels/`: YOLO-HBB `.txt` annotation files with bounding box coordinates
+
+Data annotation and cropping were performed using **X-AnyLabeling**.
+
+---
+
+#### `data/data_added_elvin.zip`
+
+An extended dataset incorporating additional images from **Elvin Mahmudzada**:
+
+* For **object detection**, the dataset structure mirrors the original dataset.
+* For **classification**, **18 additional images per class** were added, improving variability and robustness.
+
+These images are explicitly identifiable by filename patterns and are handled separately during dataset splitting to preserve class and source balance.
+
+---
+
+### Models
+
+#### Detection (`models/detection/`)
+
+* **`hand_detector_best.pt`** – best-performing YOLOv11 model
+* **`hand_detector_last.pt`** – final model checkpoint after training completion
+
+#### Classification (`models/classification/`)
+
+* **`mobilenetv2_best.keras`** – first training run (~91% accuracy, ~0.54 loss)
+* **`mobilenetv2_best_new.keras`** – later run with higher accuracy (~93%) but higher loss (~0.8)
+* **`mobilenetv2_best_added_elvin.keras`** – final model trained with extended dataset, achieving **~95% accuracy** and **~0.39 loss**
+
+---
+
+### Notebooks
+
+* **`01-yolo_model_training.ipynb`**
+  Training and evaluation of the YOLOv11 hand detection model.
+
+* **`02-classification_model_training.ipynb`**
+  Training, fine-tuning, and evaluation of the MobileNetV2-based classification model.
+
+* **`03-inference_pipeline.ipynb`**
+  End-to-end inference pipeline combining detection, cropping, and classification on unseen images.
+
+---
+
+### Results
+
+* **`results/detection_metrics/training_hand_yolo11/`**
+  Saved training artifacts and logs from the YOLOv11 training stage.
+
+* **`results/detection_metrics/val_test_metrics/`**
+  Metrics and evaluation results from the **test set** (not validation), ensuring unbiased performance reporting.
+
+---
+
+### Utilities
+
+The **`utils/`** directory contains reusable components imported across notebooks:
+
+* **Augmentations** – training-time augmentations and validation-time resizing
+* **Data generators** – batched data loading and MobileNetV2 normalization (`[-1, 1]`)
+* **Model builder** – MobileNetV2 backbone with custom classification head
+* **Dataset splitting**:
+
+  * Balanced train/val/test splits for classification
+  * Extended split logic preserving balance for Elvin’s added images
+  * YOLO-compatible splits for object detection
+* **Inference utilities** – shared logic for the complete detection + classification pipeline
