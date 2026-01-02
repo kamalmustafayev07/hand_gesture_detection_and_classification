@@ -343,5 +343,209 @@ dataset_object_detection/
 
 ---
 
-This structured approach ensures **transparent data provenance**, **balanced evaluation**, and **reproducible experiments** across both detection and classification stages.
+This structured approach ensures **transparent data provenance**, **balanced evaluation**, and **reproducible experiments** across both detection and classification stages. 
 
+## 4. Data Augmentation
+
+This section documents the **data augmentation strategy** applied during the training of the **classification model**, in line with the project guidelines. Augmentations were implemented using the **Albumentations** library to increase dataset diversity and address real-world challenges such as variations in lighting, hand orientation, camera distance, and image quality.
+
+All augmentations are applied **on-the-fly during training**, meaning the raw dataset on disk remains unchanged. This approach improves model robustness while avoiding unnecessary data duplication.
+
+---
+
+### Augmentations Used  
+**Source file:** `utils/classification_augmentations.py`  
+**Training pipeline:** `get_train_augmentations`
+
+The following transformations are applied dynamically during training:
+
+#### Geometric Transformations
+- **Resizing and Padding**  
+  - The longest image side is scaled to **224 pixels** while preserving aspect ratio.
+  - Images are padded to a **224 × 224** square with black borders.
+  - This standardizes inputs for **MobileNetV2** while accommodating varying original dimensions.
+
+- **Horizontal Flip**  
+  - Probability: **50%**  
+  - Simulates left/right hand symmetry.
+
+- **Affine Transformations**  
+  - Probability: **50%**
+  - Includes:
+    - Translation: ±10%
+    - Scaling: 0.9–1.1
+    - Rotation: ±30°
+  - Mimics different camera distances and hand placements.
+
+- **Additional Rotation**  
+  - Probability: **20%**
+  - Rotation range: ±30°
+  - Introduces further orientation variability.
+
+---
+
+#### Photometric Transformations
+- **Brightness / Contrast Adjustment**  
+  - Probability: **20%**
+  - Limits: ±10%
+  - Improves robustness to lighting changes.
+
+- **CLAHE (Contrast Limited Adaptive Histogram Equalization)**  
+  - Probability: **20%**
+  - Clip limit: 2
+  - Enhances contrast in low-light or unevenly illuminated images.
+
+- **Grayscale Conversion**  
+  - Probability: **20%**
+  - Simulates monochrome or low-color scenarios.
+
+---
+
+#### Image Degradations
+Applied with **15% probability**, one of the following:
+- **Gaussian Blur**
+  - Kernel size: 3–5
+  - Simulates motion blur or out-of-focus captures.
+- **Gaussian Noise**
+  - Standard deviation: 0–0.03
+  - Models sensor noise in real-world photography.
+- **Image Compression**
+  - Quality: 75–95%
+  - Simulates JPEG artifacts from compressed images.
+
+---
+
+### Validation and Testing Augmentations
+
+**Pipeline:** `get_val_augmentations`
+
+For validation and testing, **only deterministic preprocessing** is applied:
+- Resizing with aspect ratio preservation
+- Padding to **224 × 224**
+
+No random augmentations are used to ensure **consistent and fair evaluation**.
+
+---
+
+### Rationale
+
+Given the **limited dataset size** (~74 images per class in the original dataset, balanced between *onlyhand* and *selfie*), data augmentation plays a critical role in preventing overfitting and improving generalization.
+
+The selected augmentations specifically address:
+- **Geometric variability**  
+  (hand position, rotation, scale, distance from camera)
+- **Photometric variability**  
+  (lighting conditions, contrast differences)
+- **Image quality degradation**  
+  (blur, noise, compression artifacts)
+
+This aligns with the project’s goal of robust hand gesture recognition under diverse real-world conditions.
+
+---
+
+### Normalization
+
+After augmentations, images are normalized to the **[-1, 1] range** using TensorFlow’s  
+`preprocess_input` for **MobileNetV2** compatibility.
+
+- **Location:** `utils/classification_generator.py`
+- **Stage:** Applied after augmentation and before batching
+- **Purpose:** Ensures correct input scaling for pretrained MobileNetV2 weights
+
+---
+
+This augmentation pipeline significantly improves model robustness while maintaining a clean, reproducible, and storage-efficient training workflow. 
+
+## 5. Model Architectures
+
+This section describes the **model architectures** used in the two main stages of the project: **object detection** (localizing the hand in an image) and **classification** (predicting the digit gesture from the cropped hand region).  
+Models were selected based on **efficiency**, **task suitability**, and **project recommendations**, and were trained using a consistent and reproducible pipeline.
+
+---
+
+### Stage 1: Object Detection
+
+- **Model**: **YOLOv11**  
+  Fine-tuned from a pretrained checkpoint using the **Ultralytics** framework.
+
+- **Configuration**:  
+  Defined in `configuration/detection.yaml`, which specifies:
+  - Paths to the **train / validation / test** splits generated by  
+    `utils/split_object_detection.py`
+  - **Number of classes**: 1  
+  - **Class name**: `hand`
+
+  Training experiments and evaluation are documented in:  
+  `notebooks/01-yolo_model_training.ipynb`
+
+- **Why YOLOv11**:
+  - High efficiency and strong performance in **single-class object detection**
+  - Robust to scale changes, background complexity, and camera distance
+  - Suitable for both *onlyhand* and *selfie* images
+  - Part of the YOLO family, which is explicitly allowed by the project guidelines
+
+- **Saved Models** (`models/detection/`):
+  - **`hand_detector_best.pt`**  
+    Best-performing checkpoint selected based on validation metrics  
+    (mAP@50–95 ≈ **0.99**)
+  - **`hand_detector_last.pt`**  
+    Final checkpoint at the end of training, useful for further experimentation or fine-tuning
+
+---
+
+## Stage 2: Classification
+
+- **Model**: **MobileNetV2**  
+  Pretrained on **ImageNet**, trained end-to-end with a custom classification head.
+
+- **Architecture Definition**:  
+  Implemented in `utils/classification_model_builder.py`.
+
+  **Base network**:
+  - MobileNetV2 (`include_top=False`)
+  - Input shape: **224 × 224 × 3**
+  - Base layers frozen by default, except the last `trainable_layers` if > 0
+
+  **Classification head**:
+  - `GlobalAveragePooling2D`
+  - `Dense(256, activation="relu", kernel_regularizer=L2(0.01))`
+  - `BatchNormalization`
+  - `Dropout(rate=0.5)`
+  - `Dense(6, activation="softmax", kernel_regularizer=L2(0.01), name="predictions")`
+
+- **Training Pipeline**:
+  - Data augmentation: `utils/classification_augmentations.py`
+  - Data loading and normalization: `utils/classification_generator.py`
+  - Dataset splits:
+    - Original dataset: `utils/split_classification.py`
+    - Augmented dataset (with additional images): `utils/split_classification_added_elvin.py`
+  - Training and evaluation notebook:  
+    `notebooks/02-classification_model_training.ipynb`
+
+- **Training Strategy and Multiple Runs**:
+  
+  All classification models were trained using the **same architecture and training pipeline**.  
+  Multiple training runs were performed **without changing the model structure**, allowing the inherent **stochasticity of deep learning training** (random initialization, data shuffling, augmentation randomness) to lead the optimizer toward **different local minima**.  
+
+  This strategy resulted in progressively improved performance across runs, even with identical settings.
+
+- **Why MobileNetV2**:
+  - Lightweight and computationally efficient
+  - Well-suited for small-to-medium datasets
+  - Strong transfer learning capabilities due to ImageNet pretraining
+  - Effective at handling variations in hand shape, lighting, and orientation
+
+- **Saved Models** (`models/classification/`):
+  - **`mobilenetv2_best.keras`**  
+    Result of the **first training run** on the original dataset  
+    ~91% validation accuracy, ~0.54 loss
+  - **`mobilenetv2_best_new.keras`**  
+    Best model obtained from **subsequent training runs** using the same pipeline  
+    Improved accuracy (~93%), attributed to better convergence to a local minimum
+  - **`mobilenetv2_best_added_elvin.keras`**  
+    Model trained after **augmenting the dataset with additional images from Elvin Mahmudzada**  
+    Achieved the best performance: ~95% validation accuracy with lower loss (~0.39)
+
+---
+
+Overall, this two-stage architecture combines **accurate hand localization** with **efficient and robust gesture classification**, while maintaining a clean experimental setup that highlights the impact of both **training stochasticity** and **dataset expansion** on model performance.
