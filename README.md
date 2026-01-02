@@ -814,3 +814,33 @@ However, the design is modular, allowing any of the other saved models in `model
 ---
 
 Overall, the inference pipeline provides a clean and modular integration of detection and classification, closely resembling a real-time gesture recognition system. Its structure allows straightforward reuse in downstream applications such as interactive systems, human–computer interaction tasks, or accessibility-oriented solutions.
+
+---
+
+## 9. Conclusion
+
+This project successfully implemented a two-stage pipeline for hand gesture recognition, achieving robust performance in detecting and classifying hand poses representing digits 0–5. Key accomplishments include:
+- **High Accuracy**: The object detection model reached an mAP@50-95 of 0.994, while the classification model attained 95% accuracy on the test set after dataset augmentation.
+- **Real-World Robustness**: Through careful data collection, augmentation strategies, and model fine-tuning, the system handles variations in lighting, backgrounds, hand orientations, and skin tones effectively.
+- **Modular Design**: The reproducible structure, with separate utilities, notebooks, and configurations, facilitates easy extension and experimentation.
+- **Lessons Learned**: Dataset size and diversity were critical limiting factors; biases (e.g., underrepresentation of female hands) highlighted the importance of balanced data. Stochastic training variations and modest data sharing significantly improved results without architectural changes.
+
+Future work could involve expanding the dataset for better demographic balance, integrating real-time video processing, or exploring advanced models like Vision Transformers for further accuracy gains. Overall, this project demonstrates practical computer vision skills and provides a solid foundation for gesture-based applications in HCI, accessibility, and beyond.
+
+---
+
+## 10. License
+
+This project is licensed under the MIT License. You are free to use, modify, and distribute the code and models for any purpose, provided that the original attribution is preserved.
+
+### MIT License
+
+Copyright (c) 2026 Kamal Mustafayev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+**Note on Data**: The datasets (`data.zip` and `data_added_elvin.zip`) are provided strictly for educational purposes only and may not be used, copied, modified, distributed, or redistributed in any form without explicit written permission from the author (Kamal Mustafayev). Shared data from Elvin Mahmudzada is used with permission and is subject to the same restrictions. Unauthorized use of the data is prohibited. If you wish to use the data, please contact the author for approval.
