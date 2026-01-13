@@ -1,4 +1,12 @@
 # Hand Gesture Recognition Project Documentation
+
+![Result Example 1](images/Examples/Example_0.png)
+![Result Example 2](images/Examples/Example_1.png)
+![Result Example 3](images/Examples/Example_2.png)
+![Result Example 4](images/Examples/Example_3.png)
+![Result Example 5](images/Examples/Example_4.png)
+![Result Example 6](images/Examples/Example_5.png)
+
 ## 1. Project Overview
 
 This project implements a two-stage computer vision pipeline for hand gesture recognition, designed to identify numbers from 0 to 5 based on hand poses, including variations in finger configurations for classes 1 through 4 beyond just the index finger, while focusing on standard gestures as defined (e.g., closed fist for 0, all fingers up for 5). The system detects the hand region in an input image and classifies the gesture, addressing real-world challenges such as variability in lighting, backgrounds, hand orientations, shapes, skin tones, and limited data. The project emphasizes dataset collection—with assistance from friends for gathering images—annotation quality, model training, evaluation, and a reproducible inference pipeline, aligning with the assignment's focus on practical computer vision skills. The classification and cropping processes were optimized for the inner palm area, achieving strong performance despite data constraints: the best classification model reached 95% accuracy, and object detection attained mAP50 of 0.995 and mAP50-95 of 0.994.
@@ -54,6 +62,11 @@ project_root/
 │   ├── data.zip
 │   └── data_added_elvin.zip
 │
+│
+├── images/
+│   ├── Examples/
+│   └── Metrics/
+│
 ├── models/
 │   ├── classification/
 │   └── detection/
@@ -76,6 +89,7 @@ project_root/
     ├── split_classification.py
     ├── split_classification_added_elvin.py
     └── split_object_detection.py
+
 ````
 
 ---
@@ -605,6 +619,13 @@ The detection model is trained using **YOLOv11n**, selected for its favorable tr
 - **Automatic Mixed Precision (`amp = True`)**  
   Uses FP16 where possible to speed up training and reduce GPU memory usage without sacrificing accuracy.
 
+#### Results
+![Results of Training - Training Metrics](images/Metrics/Object%20Detection%20Model/Training_Detection.png)
+![Results of Training - F1 Curve](images/Metrics/Object%20Detection%20Model/F1_Curve_Detection.png)
+![Results of Training - Precision Confidence Curve](images/Metrics/Object%20Detection%20Model/Precision_Confidence_Detection.png)
+![Results of Training - Precision Recall Curve](images/Metrics/Object%20Detection%20Model/Precision_Recall_Detection.png)
+![Results of Training - Recall Confidence Curve](images/Metrics/Object%20Detection%20Model/Recall_Confidence_Detection.png)
+![Results of Training - Test Batch](images/Metrics/Object%20Detection%20Model/Test_Batch_Detection.png)
 ---
 
 ### Classification Training  
@@ -663,6 +684,16 @@ The classification model is defined in `utils/classification_model_builder.py` a
   - **EarlyStopping**: Stops training when validation loss no longer improves, helping prevent overfitting.  
   - **ModelCheckpoint**: Saves the best-performing model according to validation loss.  
   - **ReduceLROnPlateau**: Dynamically reduces the learning rate when progress stalls, enabling finer convergence.
+
+#### Results (Best Model)
+![Results of Training - Training Accuracy Curve](images/Metrics/Classification%20Model/Training_Accuracy_Curve_95.png)
+
+![Results of Training - Training Loss Curve](images/Metrics/Classification%20Model/Training_Loss_Curve_95.png)
+
+![Results of Training - Confusion Matrix](images/Metrics/Classification%20Model/Confusion_Matrix.png)
+
+##### Test Loss and Accuracy
+![Results of Training - Test Accuracy and Loss](images/Metrics/Classification%20Model/Test_Loss_and_Accuracy.png)
 
 ---
 
